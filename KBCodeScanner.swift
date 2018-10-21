@@ -19,7 +19,7 @@ class KBCodeScanner: UIView, AVCaptureMetadataOutputObjectsDelegate {
     var qrCodeFrameView:UIView?
     
     // Added to support different barcodes
-    let supportedBarCodes = [AVMetadataObjectTypeQRCode, AVMetadataObjectTypeCode128Code, AVMetadataObjectTypeCode39Code, AVMetadataObjectTypeCode93Code, AVMetadataObjectTypeUPCECode, AVMetadataObjectTypePDF417Code, AVMetadataObjectTypeEAN13Code, AVMetadataObjectTypeAztecCode]
+    let supportBarCodes: [AVMetadataObject.ObjectType] = [.qr, .code128, .code39, .code93, .upce, .code39Mod43, .pdf417, .ean13, .ean8, .aztec]
     
     
     // Only override draw() if you perform custom drawing.
@@ -32,7 +32,7 @@ class KBCodeScanner: UIView, AVCaptureMetadataOutputObjectsDelegate {
     
     func qrCodeSetUp(){
         
-        let captureDevice = AVCaptureDevice.defaultDevice(withMediaType: AVMediaTypeVideo)
+        guard let captureDevice = AVCaptureDevice.default(for: .video) else {return}
         
         do {
             // Get an instance of the AVCaptureDeviceInput class using the previous device object.
@@ -51,11 +51,11 @@ class KBCodeScanner: UIView, AVCaptureMetadataOutputObjectsDelegate {
             captureMetadataOutput.setMetadataObjectsDelegate(self, queue: DispatchQueue.main)
             
             // Detect all the supported bar code
-            captureMetadataOutput.metadataObjectTypes = supportedBarCodes
+            captureMetadataOutput.metadataObjectTypes = supportBarCodes
             
             // Initialize the video preview layer and add it as a sublayer to the viewPreview view's layer.
-            videoPreviewLayer = AVCaptureVideoPreviewLayer(session: captureSession)
-            videoPreviewLayer?.videoGravity = AVLayerVideoGravityResizeAspectFill
+            videoPreviewLayer = AVCaptureVideoPreviewLayer(session: captureSession!)
+            videoPreviewLayer?.videoGravity = AVLayerVideoGravity.resizeAspectFill
             videoPreviewLayer?.frame = self.layer.bounds
             self.layer.addSublayer(videoPreviewLayer!)
             self.clipsToBounds = true
@@ -81,10 +81,10 @@ class KBCodeScanner: UIView, AVCaptureMetadataOutputObjectsDelegate {
         }
     }
     
-    func captureOutput(_ captureOutput: AVCaptureOutput!, didOutputMetadataObjects metadataObjects: [Any]!, from connection: AVCaptureConnection!) {
+    func metadataOutput(_ output: AVCaptureMetadataOutput, didOutput metadataObjects: [AVMetadataObject], from connection: AVCaptureConnection) {
         
         // Check if the metadataObjects array is not nil and it contains at least one object.
-        if metadataObjects == nil || metadataObjects.count == 0 {
+        if metadataObjects.count == 0 {
             qrCodeFrameView?.frame = CGRect.zero
             if self.callBackQRData != nil{
                 self.callBackQRData!("No barcode/QR code is detected")
@@ -98,9 +98,7 @@ class KBCodeScanner: UIView, AVCaptureMetadataOutputObjectsDelegate {
         // Here we use filter method to check if the type of metadataObj is supported
         // Instead of hardcoding the AVMetadataObjectTypeQRCode, we check if the type
         // can be found in the array of supported bar codes.
-        if supportedBarCodes.contains(metadataObj.type) {
-            //        if metadataObj.type == AVMetadataObjectTypeQRCode {
-            // If the found metadata is equal to the QR code metadata then update the status label's text and set the bounds
+        if supportBarCodes.contains(metadataObj.type) {
             let barCodeObject = videoPreviewLayer?.transformedMetadataObject(for: metadataObj)
             qrCodeFrameView?.frame = barCodeObject!.bounds
             
@@ -113,3 +111,4 @@ class KBCodeScanner: UIView, AVCaptureMetadataOutputObjectsDelegate {
     }
 
 }
+
